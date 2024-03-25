@@ -11,6 +11,7 @@
 #include <QCameraImageProcessingControl>
 #include <QDebug>
 #include <QMetaEnum>
+#include <QComboBox>
 
 
 class CameraSettingsDialog : public QDialog {
@@ -29,6 +30,7 @@ private:
 	void addColorFilterControl();
 	void addPixelFormatControl();
 	void addResolutionAndFpsControl();
+	void addCurrentResolutionSettingsToComboBox(QComboBox* comboBox, const QCamera* camera);
 	QString pixelFormatToString(QVideoFrame::PixelFormat format);
 	void addZoomControl();
 	void standardizeLabelSize(QLabel *label);

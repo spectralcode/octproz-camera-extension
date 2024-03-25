@@ -56,7 +56,7 @@ void CameraSettingsDialog::addCameraImageProcessingControl(const QString &labelT
 	doubleSpinBox->setRange(minValue, maxValue);
 	doubleSpinBox->setSingleStep(stepValue);
 
-	QCameraImageProcessing *imageProcessing = camera->imageProcessing();
+	QCameraImageProcessing *imageProcessing = this->camera->imageProcessing();
 	if (imageProcessing) {
 		//set initial value based on the parameter
 		qreal initialValue = 0;
@@ -118,7 +118,7 @@ void CameraSettingsDialog::addCameraImageProcessingControl(const QString &labelT
 
 
 void CameraSettingsDialog::addColorFilterControl() {
-	QCameraImageProcessing *imageProcessing = camera->imageProcessing();
+	QCameraImageProcessing *imageProcessing = this->camera->imageProcessing();
 	if (!imageProcessing->isAvailable()) {
 		return;
 	}
@@ -171,7 +171,7 @@ void CameraSettingsDialog::addPixelFormatControl() {
 	QComboBox *comboBox = new QComboBox(this);
 
 	//get supported viewfinder settings to prevent duplicates in the combo box
-	const QList<QCameraViewfinderSettings> supportedSettings = camera->supportedViewfinderSettings();
+	const QList<QCameraViewfinderSettings> supportedSettings = this->camera->supportedViewfinderSettings();
 	QSet<QVideoFrame::PixelFormat> seenFormats;
 
 	for (const QCameraViewfinderSettings &settings : supportedSettings) {
@@ -184,7 +184,7 @@ void CameraSettingsDialog::addPixelFormatControl() {
 	// Connect the combo box selection change to update the camera's viewfinder settings
 	connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, comboBox]() {
 		auto pixelFormat = comboBox->currentData().value<QVideoFrame::PixelFormat>();
-		QCameraViewfinderSettings viewfinderSettings = camera->viewfinderSettings();
+		QCameraViewfinderSettings viewfinderSettings = this->camera->viewfinderSettings();
 		viewfinderSettings.setPixelFormat(pixelFormat);
 		this->camera->setViewfinderSettings(viewfinderSettings);
 	});
@@ -208,16 +208,39 @@ void CameraSettingsDialog::addResolutionAndFpsControl() {
 	QComboBox *comboBox = new QComboBox(this);
 
 	//get resolution/fps combinations and populate combobox
-	const QList<QCameraViewfinderSettings> supportedSettings = camera->supportedViewfinderSettings();
-	for(const QCameraViewfinderSettings &settings : supportedSettings) {
-		QString resolutionFps = QString("%1x%2, %3 FPS")
-									.arg(settings.resolution().width())
-									.arg(settings.resolution().height())
-									.arg(settings.minimumFrameRate());
-		comboBox->addItem(resolutionFps, QVariant::fromValue(settings));
+	const QList<QCameraViewfinderSettings> supportedSettings = this->camera->supportedViewfinderSettings();
+	if(!supportedSettings.isEmpty()){
+		for(const QCameraViewfinderSettings &settings : supportedSettings) {
+			QString resolutionFps = QString("%1x%2, %3 FPS")
+										.arg(settings.resolution().width())
+										.arg(settings.resolution().height())
+										.arg(settings.minimumFrameRate());
+			comboBox->addItem(resolutionFps, QVariant::fromValue(settings));
+		}
+	} else {
+		//on some tested systems (Jetson Nano) supportedViewfinderSettings() is empty. In this case we generate some common resolution fps combinations and hope that these are supported by the used camera system
+		struct ResolutionFps { int width; int height; qreal fps; };
+		QList<ResolutionFps> standardSettings = {
+			{320, 240, 20},
+			{640, 480, 20},
+			{640, 480, 5},
+			{960, 720, 20},
+			{1280, 720, 20}
+		};
+
+		for (const auto &setting : standardSettings) {
+			QCameraViewfinderSettings standardSetting;
+			standardSetting.setResolution(setting.width, setting.height);
+			standardSetting.setMinimumFrameRate(setting.fps);
+			standardSetting.setMaximumFrameRate(setting.fps);
+
+			QString resolutionFps = QString("%1x%2, %3 FPS").arg(setting.width).arg(setting.height).arg(setting.fps);
+			comboBox->addItem(resolutionFps, QVariant::fromValue(standardSetting));
+		}
 	}
 	
 	if (comboBox->count() > 0) {
+		this->addCurrentResolutionSettingsToComboBox(comboBox, this->camera);
 		//generate gui elements
 		QHBoxLayout *hLayout = new QHBoxLayout();
 		QLabel *label = new QLabel(tr("Resolution"), this);
@@ -228,7 +251,7 @@ void CameraSettingsDialog::addResolutionAndFpsControl() {
 		//apply changed settings
 		connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, comboBox]() {
 			QCameraViewfinderSettings settings = comboBox->currentData().value<QCameraViewfinderSettings>();
-			camera->setViewfinderSettings(settings);
+			this->camera->setViewfinderSettings(settings);
 		});
 	} else {
 		delete comboBox; 
@@ -236,8 +259,30 @@ void CameraSettingsDialog::addResolutionAndFpsControl() {
 }
 
 
+void CameraSettingsDialog::addCurrentResolutionSettingsToComboBox(QComboBox* comboBox, const QCamera* camera) {
+	QCameraViewfinderSettings currentSettings = camera->viewfinderSettings();
+	QString currentSettingsText = QString("%1x%2, %3 FPS")
+										.arg(currentSettings.resolution().width())
+										.arg(currentSettings.resolution().height())
+										.arg(currentSettings.minimumFrameRate());
+
+	bool found = false;
+	for (int i = 0; i < comboBox->count(); ++i) {
+		if (comboBox->itemText(i) == currentSettingsText) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found) {
+		comboBox->insertItem(0, currentSettingsText, QVariant::fromValue(currentSettings));
+		comboBox->setCurrentIndex(0);
+	}
+}
+
+
 void CameraSettingsDialog::addZoomControl() {
-	QCameraZoomControl *zoomControl = camera->service()->requestControl<QCameraZoomControl*>();
+	QCameraZoomControl *zoomControl = this->camera->service()->requestControl<QCameraZoomControl*>();
 	if (!zoomControl) {
 		//zoom control is not supported
 		return;
