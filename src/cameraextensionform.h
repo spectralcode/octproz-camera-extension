@@ -21,7 +21,6 @@ public:
 
 	Ui::CameraExtensionForm* ui;
 
-
 protected:
 
 
@@ -29,7 +28,6 @@ public slots:
 	void connectToSelectedCamera();
 	void disconnectCurrentCamera();
 	void openSettingsDialog();
-
 
 private:
 	void fillCameraComboBox();
@@ -41,7 +39,6 @@ signals:
 	void connectClicked();
 	void disconnectClicked();;
 	void aboutToClose();
-
 };
 
 #endif // CAMERAEXTENSIONFORM_H
