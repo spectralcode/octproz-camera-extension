@@ -7,17 +7,20 @@
 #include <QCamera>
 #include <QCameraInfo>
 #include <QTimer>
+#include <QCameraImageCapture>
+#include <QDateTime>
 
 
 CameraViewWidget::CameraViewWidget(QWidget *parent)
-	: QGraphicsView(parent), camera(nullptr), 
+	: QGraphicsView(parent),
+	  camera(nullptr),
 	  scene(new QGraphicsScene(this)),
-	  videoWidget(new QVideoWidget()), 
+	  videoWidget(new QGraphicsVideoItem()),
 	  oldRotationAngle(0.0),
 	  isFirstShowEvent(true)
 {
 	this->setScene(scene);
-	this->scene->addWidget(videoWidget);
+	this->scene->addItem(videoWidget);
 }
 
 CameraViewWidget::~CameraViewWidget() {
@@ -46,13 +49,13 @@ void CameraViewWidget::showEvent(QShowEvent *event) {
 		//executing fitCameraViewToWindow immediately and then via singleShot to ensure accurate fitting, 
 		//as the first call alone doesn't always adjust the view correctly due to pending. singleShot(0) executed as soon as all events are processed
 		this->fitCameraViewToWindow();
-		QTimer::singleShot(0, this, &CameraViewWidget::fitCameraViewToWindow); 
+		QTimer::singleShot(0, this, &CameraViewWidget::fitCameraViewToWindow);
 		this->isFirstShowEvent = false;
 	}
 }
 
 void CameraViewWidget::hideEvent(QHideEvent *event) {
-	QGraphicsView::hideEvent(event); 
+	QGraphicsView::hideEvent(event);
 	if (this->camera) {
 		this->camera->stop();
 		delete this->camera;
@@ -66,6 +69,9 @@ void CameraViewWidget::mouseDoubleClickEvent(QMouseEvent *event) {
 	}
 	if (event->button() == Qt::MidButton) {
 		this->rotateAbsolute(0);
+	}
+	if (event->button() == Qt::RightButton) {
+		this->takeSnapshot();
 	}
 	QGraphicsView::mouseDoubleClickEvent(event);
 }
@@ -98,13 +104,21 @@ void CameraViewWidget::wheelEvent(QWheelEvent *event) {
 		}
 		this->rotateAbsolute(angle);
 		event->accept();
-	}	
+	}
+}
+
+void CameraViewWidget::keyPressEvent(QKeyEvent* event) {
+	if((event->modifiers() & Qt::ControlModifier) && (event->key() == Qt::Key_S)){
+		this->takeSnapshot();
+	} else {
+		QGraphicsView::keyPressEvent(event);
+	}
 }
 
 void CameraViewWidget::fitCameraViewToWindow() {
-	this->fitInView(this->scene->sceneRect(), Qt::KeepAspectRatio);
-	this->ensureVisible(this->videoWidget->rect());
-	this->centerOn(this->pos());
+	this->fitInView(this->videoWidget->boundingRect(), Qt::KeepAspectRatio);
+	this->ensureVisible(this->videoWidget->boundingRect());
+	this->centerOn(this->videoWidget);
 	this->scene->setSceneRect(this->scene->itemsBoundingRect());
 }
 
@@ -126,7 +140,7 @@ void CameraViewWidget::openCamera(const QCameraInfo& cameraInfo) {
 	}
 	
 	//create new camera and start live view
-	this->camera = new QCamera(cameraInfo);
+	this->camera = new QCamera(cameraInfo, this);
 	this->camera->setViewfinder(this->videoWidget);
 	this->camera->start();
 	
@@ -143,4 +157,22 @@ void CameraViewWidget::rotateAbsolute(qreal angle) {
 	this->rotate(this->oldRotationAngle-angle);
 	this->oldRotationAngle = angle;
 	emit rotationAngleChanged(this->oldRotationAngle);
+}
+
+void CameraViewWidget::takeSnapshot() {
+	if(!camera || camera->status() != QCamera::ActiveStatus){
+		return;
+	}
+	QCameraImageCapture *imageCapture = new QCameraImageCapture(camera);
+	connect(imageCapture, &QCameraImageCapture::imageCaptured, this, &CameraViewWidget::saveSnapshot);
+	imageCapture->capture();
+}
+
+void CameraViewWidget::saveSnapshot(int id, const QImage &image) {
+	Q_UNUSED(id);
+	QString fileName = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + "_snapshot" + ".png";
+	if (image.save(fileName))
+		qDebug() << "Snapshot saved as" << fileName;
+	else
+		qDebug() << "Failed to save snapshot";
 }

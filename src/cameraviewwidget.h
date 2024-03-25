@@ -26,12 +26,13 @@ protected:
 	void showEvent(QShowEvent* event) override;
 	void hideEvent(QHideEvent* event) override;
 	void mouseDoubleClickEvent(QMouseEvent* event) override;
-	void wheelEvent(QWheelEvent*event) override;
+	void wheelEvent(QWheelEvent* event) override;
+	void keyPressEvent(QKeyEvent* event) override;
 
 private:
 	QCamera* camera;
 	QGraphicsScene* scene;
-	QVideoWidget* videoWidget;
+	QGraphicsVideoItem* videoWidget;
 	qreal oldRotationAngle;
 	QCameraInfo currentCamera;
 	bool isFirstShowEvent;
@@ -40,13 +41,16 @@ public slots:
 	void fitCameraViewToWindow();
 	void openCamera(const QCameraInfo& camera);
 	void closeCamera();
-
+	void takeSnapshot();
 
 signals:
 	void error(QString);
 	void info(QString);
 	void rotationAngleChanged(qreal angle);
 	void currentCameraChanged(QString cameraName);
+	
+private slots:
+	void saveSnapshot(int id, const QImage &image);
 };
 
 #endif // CAMERAVIEWWIDGET_H
