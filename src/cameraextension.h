@@ -14,7 +14,6 @@ class CameraExtension : public Extension
 	Q_PLUGIN_METADATA(IID Extension_iid)
 	Q_INTERFACES(Extension)
 
-
 public:
 	CameraExtension();
 	~CameraExtension();
@@ -28,12 +27,10 @@ private:
 	CameraExtensionForm* form;
 	CameraViewWidget* cameraWidget;
 
-
 public slots:
 	void storeParameters();
 	virtual void rawDataReceived(void* buffer, unsigned int bitDepth, unsigned int samplesPerLine, unsigned int linesPerFrame, unsigned int framesPerBuffer, unsigned int buffersPerVolume, unsigned int currentBufferNr) override;
 	virtual void processedDataReceived(void* buffer, unsigned int bitDepth, unsigned int samplesPerLine, unsigned int linesPerFrame, unsigned int framesPerBuffer, unsigned int buffersPerVolume, unsigned int currentBufferNr) override;
-
 
 signals:
 
