@@ -32,21 +32,34 @@ SOURCES += \
 	src/cameraextension.cpp \
 	src/cameraextensionform.cpp \
 	src/camerasettingsdialog.cpp \
-	src/cameraviewwidget.cpp 
+	src/cameraviewwidget.cpp  \
+	src/overlayitems/anchorpoint.cpp \
+	src/overlayitems/circleoverlay.cpp \
+	src/overlayitems/lineoverlay.cpp \
+	src/overlayitems/overlayitem.cpp \
+	src/overlayitems/polygonoverlay.cpp \
+	src/overlayitems/rectoverlay.cpp
 
 HEADERS += \
 	src/cameraextension.h \
 	src/cameraextensionform.h \
 	src/cameraextensionparameters.h \
 	src/camerasettingsdialog.h \
-	src/cameraviewwidget.h 
+	src/cameraviewwidget.h  \
+	src/overlayitems/anchorpoint.h \
+	src/overlayitems/circleoverlay.h \
+	src/overlayitems/lineoverlay.h \
+	src/overlayitems/overlayitem.h \
+	src/overlayitems/polygonoverlay.h \
+	src/overlayitems/rectoverlay.h
 
 FORMS +=  \
-	src\cameraextensionform.ui
+	src/cameraextensionform.ui
 
 INCLUDEPATH += \
 	$$SHAREDIR \
-	src 
+	src \
+	src/overlayitems
 
 
 #set system specific output directory for extension
