@@ -6,9 +6,10 @@
 #include <QCameraZoomControl>
 
 
-CameraSettingsDialog::CameraSettingsDialog(QCamera* existingCamera, QWidget* parent) 
+CameraSettingsDialog::CameraSettingsDialog(QCamera* existingCamera, QList<QCameraViewfinderSettings> existingSupportedSettings, QWidget* parent)
 	: QDialog(parent), 
-	  camera(existingCamera) 
+	  camera(existingCamera),
+	  supportedSettings(existingSupportedSettings)
 {
 	setupUi();
 }
@@ -17,7 +18,6 @@ CameraSettingsDialog::CameraSettingsDialog(QCamera* existingCamera, QWidget* par
 CameraSettingsDialog::~CameraSettingsDialog() {
 
 }
-
 
 void CameraSettingsDialog::setupUi() {
 	this->setWindowTitle(tr("Camera Settings"));
@@ -42,7 +42,6 @@ void CameraSettingsDialog::setupUi() {
 	this->layout->setSizeConstraint(QLayout::SetMinimumSize);
 	this->setMinimumSize(layout->minimumSize());
 }
-
 
 void CameraSettingsDialog::addCameraImageProcessingControl(const QString &labelText, QCameraImageProcessingControl::ProcessingParameter param) {
 	QHBoxLayout *hLayout = new QHBoxLayout();
@@ -116,7 +115,6 @@ void CameraSettingsDialog::addCameraImageProcessingControl(const QString &labelT
 	this->layout->addLayout(hLayout);
 }
 
-
 void CameraSettingsDialog::addColorFilterControl() {
 	QCameraImageProcessing *imageProcessing = this->camera->imageProcessing();
 	if (!imageProcessing->isAvailable()) {
@@ -166,12 +164,11 @@ void CameraSettingsDialog::addColorFilterControl() {
 	}
 }
 
-
 void CameraSettingsDialog::addPixelFormatControl() {
 	QComboBox *comboBox = new QComboBox(this);
 
 	//get supported viewfinder settings to prevent duplicates in the combo box
-	const QList<QCameraViewfinderSettings> supportedSettings = this->camera->supportedViewfinderSettings();
+	const QList<QCameraViewfinderSettings> supportedSettings = this->supportedSettings;
 	QSet<QVideoFrame::PixelFormat> seenFormats;
 
 	for (const QCameraViewfinderSettings &settings : supportedSettings) {
@@ -189,7 +186,6 @@ void CameraSettingsDialog::addPixelFormatControl() {
 		this->camera->setViewfinderSettings(viewfinderSettings);
 	});
 
-	
 	//only show gui elements -if there are any color filters that can be changed
 	if (comboBox->count() > 0) {
 		QHBoxLayout *hLayout = new QHBoxLayout();
@@ -203,12 +199,11 @@ void CameraSettingsDialog::addPixelFormatControl() {
 	}
 }
 
-
 void CameraSettingsDialog::addResolutionAndFpsControl() {
 	QComboBox *comboBox = new QComboBox(this);
 
 	//get resolution/fps combinations and populate combobox
-	const QList<QCameraViewfinderSettings> supportedSettings = this->camera->supportedViewfinderSettings();
+	const QList<QCameraViewfinderSettings> supportedSettings = this->supportedSettings;
 	if(!supportedSettings.isEmpty()){
 		for(const QCameraViewfinderSettings &settings : supportedSettings) {
 			QString resolutionFps = QString("%1x%2, %3 FPS")
@@ -258,7 +253,6 @@ void CameraSettingsDialog::addResolutionAndFpsControl() {
 	}
 }
 
-
 void CameraSettingsDialog::addCurrentResolutionSettingsToComboBox(QComboBox* comboBox, const QCamera* camera) {
 	QCameraViewfinderSettings currentSettings = camera->viewfinderSettings();
 	QString currentSettingsText = QString("%1x%2, %3 FPS")
@@ -270,6 +264,7 @@ void CameraSettingsDialog::addCurrentResolutionSettingsToComboBox(QComboBox* com
 	for (int i = 0; i < comboBox->count(); ++i) {
 		if (comboBox->itemText(i) == currentSettingsText) {
 			found = true;
+			comboBox->setCurrentIndex(i);
 			break;
 		}
 	}
@@ -279,7 +274,6 @@ void CameraSettingsDialog::addCurrentResolutionSettingsToComboBox(QComboBox* com
 		comboBox->setCurrentIndex(0);
 	}
 }
-
 
 void CameraSettingsDialog::addZoomControl() {
 	QCameraZoomControl *zoomControl = this->camera->service()->requestControl<QCameraZoomControl*>();
@@ -322,7 +316,6 @@ void CameraSettingsDialog::addZoomControl() {
 		layout->addLayout(digitalZoomLayout);
 	}
 }
-
 
 QString CameraSettingsDialog::pixelFormatToString(QVideoFrame::PixelFormat format) {
 	switch(format) {
