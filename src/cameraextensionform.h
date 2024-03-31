@@ -32,13 +32,16 @@ public slots:
 private:
 	void fillCameraComboBox();
 	void connectToCamera(QString deviceName);
-	CameraExtensionParameters parameters;;
+	CameraExtensionParameters parameters;
 
 signals:
 	void paramsChanged();
 	void connectClicked();
-	void disconnectClicked();;
+	void disconnectClicked();
 	void aboutToClose();
+	void info(QString);
+	void error(QString);
+
 };
 
 #endif // CAMERAEXTENSIONFORM_H

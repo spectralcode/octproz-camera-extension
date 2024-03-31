@@ -12,6 +12,8 @@ CameraExtension::CameraExtension() : Extension() {
 
 	//init gui
 	this->form = new CameraExtensionForm();
+	connect(this->form, &CameraExtensionForm::info, this, &CameraExtension::info);
+	connect(this->form, &CameraExtensionForm::error, this, &CameraExtension::error);
 	
 	//settings
 	connect(this->form, &CameraExtensionForm::paramsChanged, this, &CameraExtension::storeParameters);
