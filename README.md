@@ -12,6 +12,7 @@ CameraExtension a plugin for [OCTproZ](https://github.com/spectralcode/OCTproZ),
 - Rotating (SHIFT + mouse wheel)
 - Zooming (CTRL + mouse wheel)
 - Recording snapshots (CTRL + S)
+- Indicating OCT scan area with overlays (circle, line, rectangle, polygon)
 - Various camera settings (brightness, contrast, saturation, sharpening, resolution, and zoom if supported by the used camera)
 - The used camera is remembered and automatically selected on restart
 
