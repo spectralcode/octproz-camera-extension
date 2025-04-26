@@ -22,7 +22,7 @@ public:
 	Ui::CameraExtensionForm* ui;
 
 protected:
-
+	bool eventFilter(QObject* watched, QEvent* event) override;
 
 public slots:
 	void connectToSelectedCamera();

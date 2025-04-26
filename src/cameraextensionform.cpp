@@ -15,7 +15,7 @@ CameraExtensionForm::CameraExtensionForm(QWidget *parent) :
 	connect(ui->toolButton_reload, &QToolButton::clicked, this, &CameraExtensionForm::fillCameraComboBox);
 	connect(ui->widget_video, &CameraViewWidget::info, this, &CameraExtensionForm::info);
 	connect(ui->widget_video, &CameraViewWidget::error, this, &CameraExtensionForm::error);
-	
+
 	//connect to save changed CameraViewWidget settings
 	connect(ui->widget_video, &CameraViewWidget::overlayStateChanged, this, &CameraExtensionForm::paramsChanged);
 	connect(ui->widget_video, &CameraViewWidget::rotationAngleChanged, this, [this](qreal rotationAngle) {
@@ -30,6 +30,8 @@ CameraExtensionForm::CameraExtensionForm(QWidget *parent) :
 		this->parameters.snapShotSavePath = snapshotDir;
 		emit this->paramsChanged();
 	});
+
+	this->installEventFilter(this);
 }
 
 CameraExtensionForm::~CameraExtensionForm() {
@@ -37,6 +39,28 @@ CameraExtensionForm::~CameraExtensionForm() {
 }
 
 void CameraExtensionForm::setSettings(QVariantMap settings){
+	//update parameters struct, use default values if empty
+	this->parameters.selectedCamera = settings.value(CAMERA_SELECTION, "").toString();
+	this->parameters.rotationAngle = settings.value(CAMERA_ROTATION_ANGLE, 0.0).toDouble();
+	this->parameters.snapShotSavePath = settings.value(CAMERA_SNAPSHOT_SAVE_PATH, "").toString();
+	this->parameters.windowState = settings.value(CAMERA_WINDOW_STATE).toByteArray();
+
+	//apply parameters to widgets
+	this->ui->widget_video->setSnapshotSaveDir(this->parameters.snapShotSavePath);
+	this->ui->widget_video->rotateAbsolute(this->parameters.rotationAngle);
+	this->connectToCamera(this->parameters.selectedCamera);
+
+	//update gui to represent correct settings
+	int index = this->ui->comboBox_camera->findData(this->parameters.selectedCamera);
+	if (index != -1) {
+		disconnect(ui->comboBox_camera, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &CameraExtensionForm::connectToSelectedCamera);
+		this->ui->comboBox_camera->setCurrentIndex(index);
+		connect(ui->comboBox_camera, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &CameraExtensionForm::connectToSelectedCamera);
+	}
+
+	//restore window geometry
+	this->restoreGeometry(this->parameters.windowState);
+
 	//update overlays
 	auto overlays = this->ui->widget_video->getOverlays();
 	for (const auto &overlay : overlays) {
@@ -45,32 +69,31 @@ void CameraExtensionForm::setSettings(QVariantMap settings){
 			overlay.first->loadState(overlayState);
 		}
 	}
-
-	//apply settings to widgets
-	this->ui->widget_video->setSnapshotSaveDir(settings.value(CAMERA_SNAPSHOT_SAVE_PATH).toString());
-	this->ui->widget_video->rotateAbsolute(settings.value(CAMERA_ROTATION_ANGLE).toDouble());
-	QString cameraName = settings.value(CAMERA_SELECTION).toString();
-	this->connectToCamera(cameraName);
-	
-	//update gui to represent correct settings
-	int index = this->ui->comboBox_camera->findData(cameraName);
-	if (index != -1) {
-		disconnect(ui->comboBox_camera, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &CameraExtensionForm::connectToSelectedCamera);
-		this->ui->comboBox_camera->setCurrentIndex(index);
-		connect(ui->comboBox_camera, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &CameraExtensionForm::connectToSelectedCamera);
-	}
 }
 
 void CameraExtensionForm::getSettings(QVariantMap* settings) {
 	settings->insert(CAMERA_SELECTION, this->parameters.selectedCamera);
 	settings->insert(CAMERA_ROTATION_ANGLE, this->parameters.rotationAngle);
 	settings->insert(CAMERA_SNAPSHOT_SAVE_PATH, this->parameters.snapShotSavePath);
+	settings->insert(CAMERA_WINDOW_STATE, this->parameters.windowState);
 
-	// Save states of overlays
+	//save states of overlays
 	auto overlays = this->ui->widget_video->getOverlays();
 	for (auto &overlay : overlays) {
 		settings->insert(overlay.second + "_state", overlay.first->saveState());
 	}
+}
+
+bool CameraExtensionForm::eventFilter(QObject* watched, QEvent* event) {
+	if (watched == this) {
+		if (event->type() == QEvent::Resize || event->type() == QEvent::Move) {
+			if (this->isVisible()) {
+				this->parameters.windowState = this->saveGeometry();
+				emit paramsChanged();
+			}
+		}
+	}
+	return QWidget::eventFilter(watched, event);
 }
 
 void CameraExtensionForm::openSettingsDialog() {
